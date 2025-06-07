@@ -9,8 +9,10 @@
 		"outDir": "./dist",
 		"rootDir": ".",
 		"moduleResolution": "NodeNext",
-		"module": "NodeNext"
+		"module": "NodeNext",
+		"declaration": true,
+		"sourceMap": true
 	},
-	"exclude": ["node_modules"],
-	"include": ["./**/*.ts"]
+	"exclude": ["node_modules", "dist"],
+	"include": ["index.ts"]
 }

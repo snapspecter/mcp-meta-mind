@@ -1,0 +1,9 @@
+{
+  "tools": {
+    "taskmanager": {
+      "command": "tsx",
+      "args": ["./index.ts"],
+      "cwd": "$PROJECT_ROOT/mcp-AgentTaskHub"
+    }
+  }
+}

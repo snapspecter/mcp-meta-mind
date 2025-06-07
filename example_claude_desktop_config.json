@@ -1,0 +1,8 @@
+{
+  "tools": {
+    "taskmanager": {
+      "command": "npx",
+      "args": ["-y", "@snapspecter/mcp-AgentTaskHub"]
+    }
+  }
+}
