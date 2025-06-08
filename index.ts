@@ -44,6 +44,7 @@ enum TaskStatus {
   Done = "done",
   Failed = "failed",
   RequiresClarification = "requires_clarification",
+  Split = "split",
 }
 
 enum TaskPriority {
@@ -148,7 +149,7 @@ const TaskTypeEnum = z.enum([
   TaskType.Research,
   TaskType.Generic,
 ]);
-const TaskStatusEnum = z.enum([
+const SettableTaskStatusEnum = z.enum([
   TaskStatus.Pending,
   TaskStatus.Active,
   TaskStatus.Done,
@@ -206,9 +207,10 @@ const UpdateTaskSchema = z.object({
   taskId: z.string(),
   title: z.string().min(1).optional(),
   description: z.string().optional(),
+  status: SettableTaskStatusEnum.optional(),
   priority: TaskPriorityEnum.optional(),
   type: TaskTypeEnum.optional(),
-  status: TaskStatusEnum.optional(),
+  dependsOn: z.array(z.string()).optional(),
   artifactsGenerated: z.array(z.string()).optional(),
   environmentContext: z.string().optional(),
   suggestedRetryStrategy: z.string().optional(),
@@ -263,6 +265,38 @@ const LogTaskCompletionSummarySchema = z.object({
   taskId: z.string(),
   summaryMarkdownContent: z.string().min(1),
   artifactsGenerated: z.array(z.string()).optional(),
+});
+
+// New Schemas for Phase 2
+const SplitTaskSchema = z.object({
+  requestId: z.string(),
+  taskIdToSplit: z.string(),
+  newSubtaskDefinitions: z
+    .array(
+      z.object({
+        // Essentially BaseTaskDefinitionSchema
+        title: z.string().min(1),
+        description: z.string(),
+        priority: TaskPriorityEnum.optional(),
+        type: TaskTypeEnum.optional(),
+        dependsOn: z.array(z.string()).optional(),
+        artifactsGenerated: z.array(z.string()).optional(),
+        environmentContext: z.string().optional(),
+      }),
+    )
+    .min(1), // Must define at least one new subtask
+});
+
+const MergeTasksSchema = z.object({
+  requestId: z.string(),
+  primaryTaskId: z.string(),
+  taskIdsToMerge: z.array(z.string()).min(1), // At least one task to merge
+  newTitle: z.string().min(1).optional(),
+  newDescription: z.string().optional(),
+  newPriority: TaskPriorityEnum.optional(),
+  newType: TaskTypeEnum.optional(),
+  newEnvironmentContext: z.string().optional(),
+  newArtifactsGenerated: z.array(z.string()).optional(),
 });
 
 // --- Tool Definitions ---
@@ -348,8 +382,23 @@ const ARCHIVE_TASK_TREE_TOOL: Tool = {
 const LOG_TASK_COMPLETION_SUMMARY_TOOL: Tool = {
   name: "log_task_completion_summary",
   description:
-    "Logs a Markdown summary for a task and optionally updates its generated artifacts. Saves summary to a file.",
+    "Logs a completion summary for a task with relevant details and achievements.",
   inputSchema: convertZodToJsonSchema(LogTaskCompletionSummarySchema) as any,
+};
+
+// New Tools for Phase 2
+const SPLIT_TASK_TOOL: Tool = {
+  name: "split_task",
+  description:
+    "Splits a task into multiple new subtasks. The original task becomes a container.",
+  inputSchema: convertZodToJsonSchema(SplitTaskSchema) as any,
+};
+
+const MERGE_TASKS_TOOL: Tool = {
+  name: "merge_tasks",
+  description:
+    "Merges multiple tasks into a primary task, consolidating details and dependencies.",
+  inputSchema: convertZodToJsonSchema(MergeTasksSchema) as any,
 };
 
 // --- TaskManagerServer Class ---
@@ -757,9 +806,9 @@ class TaskManagerServer {
   public async getNextTask(
     params: z.infer<typeof GetNextTaskSchema>,
   ): Promise<object> {
-    this._assertInitialized(); // Corrected: Added assertion
+    this._assertInitialized();
     const { requestId } = params;
-    const reqEntry = this._getRequestEntryOrThrow(requestId); // _getRequestEntryOrThrow already asserts
+    const reqEntry = this._getRequestEntryOrThrow(requestId);
     if (reqEntry.completed)
       return {
         status: "already_completed",
@@ -775,17 +824,24 @@ class TaskManagerServer {
     let actionableTasks = reqEntry.tasks.filter((task) => {
       if (
         task.status === TaskStatus.Done ||
-        task.status === TaskStatus.Failed
+        task.status === TaskStatus.Failed ||
+        task.status === TaskStatus.Split
       ) {
+        // Exclude Split tasks
         return false;
       }
       const parent = task.parentId ? taskMap.get(task.parentId) : null;
       if (
         parent &&
         (parent.status === TaskStatus.Active ||
-          parent.status === TaskStatus.Pending)
+          parent.status === TaskStatus.Pending ||
+          parent.status === TaskStatus.Split)
       ) {
-        if (parent.status === TaskStatus.Active) {
+        if (
+          parent.status === TaskStatus.Active ||
+          parent.status === TaskStatus.Split
+        ) {
+          // Children of Active or Split parents
           return (
             parent.subtaskIds?.includes(task.id) && areDependenciesMet(task)
           );
@@ -810,18 +866,31 @@ class TaskManagerServer {
     }
 
     if (potentialNextTasks.length === 0) {
-      const allTerminal = reqEntry.tasks.every(
-        (t) => t.status === TaskStatus.Done || t.status === TaskStatus.Failed,
+      const allTerminalOrSplit = reqEntry.tasks.every(
+        (t) =>
+          t.status === TaskStatus.Done ||
+          t.status === TaskStatus.Failed ||
+          t.status === TaskStatus.Split,
       );
       const progressTable = this._formatTaskProgressTable(requestId);
-      if (allTerminal && !reqEntry.completed) {
-        reqEntry.completed = true;
-        reqEntry.updatedAt = new Date().toISOString();
-        await this._saveActiveTasksToFile();
-        return {
-          status: "all_tasks_terminal_request_completed",
-          message: `All tasks terminal. Request '${requestId}' completed.\n${progressTable}`,
-        };
+      if (allTerminalOrSplit && !reqEntry.completed) {
+        const nonSplitTasks = reqEntry.tasks.filter(
+          (t) => t.status !== TaskStatus.Split,
+        );
+        if (
+          nonSplitTasks.every(
+            (t) =>
+              t.status === TaskStatus.Done || t.status === TaskStatus.Failed,
+          )
+        ) {
+          reqEntry.completed = true;
+          reqEntry.updatedAt = new Date().toISOString();
+          await this._saveActiveTasksToFile();
+          return {
+            status: "all_tasks_terminal_request_completed",
+            message: `All actionable tasks terminal. Request '${requestId}' completed.\n${progressTable}`,
+          };
+        }
       }
       return {
         status: "no_actionable_task",
@@ -906,6 +975,10 @@ class TaskManagerServer {
       return { status: "already_done", message: "Task already done." };
     if (task.status === TaskStatus.Failed)
       throw new InvalidOperationError("Task failed. Cannot mark as done.");
+    if (task.status === TaskStatus.Split)
+      throw new InvalidOperationError(
+        "Split task cannot be marked done directly; its subtasks must be completed.",
+      );
 
     const now = new Date().toISOString();
     task.status = TaskStatus.Done;
@@ -917,88 +990,43 @@ class TaskManagerServer {
     reqEntry.updatedAt = now;
 
     let message = `Task '${taskId}' marked done.`;
-    let treeCompletionStatus: object | undefined = undefined;
-    let archivedInfo: object | undefined = undefined;
 
-    if (task.parentId) {
-      const parentTask = reqEntry.tasks.find((p) => p.id === task.parentId);
-      if (
-        parentTask &&
-        (parentTask.status === TaskStatus.Pending ||
-          parentTask.status === TaskStatus.Active)
-      ) {
-        const allSubtasksTerminal = parentTask.subtaskIds?.every((subId) => {
-          const sub = reqEntry.tasks.find((s) => s.id === subId);
-          return (
-            sub &&
-            (sub.status === TaskStatus.Done || sub.status === TaskStatus.Failed)
-          );
-        });
-        if (allSubtasksTerminal) {
-          parentTask.status = TaskStatus.Done;
-          parentTask.completedDetails =
-            "Automatically completed as all subtasks are terminal.";
-          parentTask.updatedAt = now;
-          message += ` Parent task '${parentTask.id}' auto-completed.`;
-        }
-      }
-    }
-
-    const taskMap = new Map(reqEntry.tasks.map((t) => [t.id, t]));
-    let taskToCheckForTreeCompletion = task;
-    if (task.parentId) {
-      const parent = taskMap.get(task.parentId);
-      if (parent && parent.status === TaskStatus.Done) {
-        taskToCheckForTreeCompletion = parent;
-      }
-    }
-
-    if (
-      this._areAllDescendantsStatus(
-        taskToCheckForTreeCompletion,
-        taskMap,
-        TaskStatus.Done,
-      )
-    ) {
-      // Automatically archive the completed task tree
-      const archivedResult = await this._autoArchiveTaskTree(
-        requestId,
-        taskToCheckForTreeCompletion.id,
-      );
-      archivedInfo = {
-        taskTreeArchived: true,
-        rootTaskId: taskToCheckForTreeCompletion.id,
-        archivedTaskCount: archivedResult.archivedCount,
-        message: `Task tree rooted at '${taskToCheckForTreeCompletion.id}' automatically archived to completed_tasks.json.`,
-      };
-      message += ` Task tree automatically archived (${archivedResult.archivedCount} tasks).`;
-    }
-
-    const allTasksInRequestTerminal = reqEntry.tasks.every(
-      (t) => t.status === TaskStatus.Done || t.status === TaskStatus.Failed,
+    const parentCompletionResult = await this._handleParentCompletion(
+      reqEntry,
+      task,
+      now,
     );
-    if (allTasksInRequestTerminal && !reqEntry.completed) {
-      reqEntry.completed = true;
-      message += ` All tasks in request '${reqEntry.requestId}' are terminal. Request completed.`;
+    message += parentCompletionResult.messageAugmentation;
+    const treeCompletionStatus = parentCompletionResult.treeCompletionStatus;
+
+    const allTasksInRequestTerminalOrSplit = reqEntry.tasks.every(
+      (t) =>
+        t.status === TaskStatus.Done ||
+        t.status === TaskStatus.Failed ||
+        t.status === TaskStatus.Split,
+    );
+    if (allTasksInRequestTerminalOrSplit && !reqEntry.completed) {
+      const nonSplitTasks = reqEntry.tasks.filter(
+        (t) => t.status !== TaskStatus.Split,
+      );
+      if (
+        nonSplitTasks.every(
+          (t) => t.status === TaskStatus.Done || t.status === TaskStatus.Failed,
+        )
+      ) {
+        reqEntry.completed = true;
+        message += ` All actionable tasks in request '${reqEntry.requestId}' are terminal. Request completed.`;
+      }
     }
 
     await this._saveActiveTasksToFile();
-    const result: any = {
+    return {
       status: "task_marked_done",
       message: `${message}\n${this._formatTaskProgressTable(requestId)}`,
       task: { id: task.id, title: task.title, status: task.status },
       requestCompleted: reqEntry.completed,
+      ...(treeCompletionStatus && { treeCompletionStatus }),
     };
-
-    if (treeCompletionStatus) {
-      result.treeCompletionStatus = treeCompletionStatus;
-    }
-
-    if (archivedInfo) {
-      result.archivedInfo = archivedInfo;
-    }
-
-    return result;
   }
 
   public async markTaskFailed(
@@ -1013,6 +1041,10 @@ class TaskManagerServer {
       return { status: "already_failed", message: "Task already failed." };
     if (task.status === TaskStatus.Done)
       throw new InvalidOperationError("Task done. Cannot mark as failed.");
+    if (task.status === TaskStatus.Split)
+      throw new InvalidOperationError(
+        "Split task cannot be marked failed directly.",
+      );
 
     const now = new Date().toISOString();
     task.status = TaskStatus.Failed;
@@ -1024,60 +1056,36 @@ class TaskManagerServer {
     reqEntry.updatedAt = now;
 
     let message = `Task '${taskId}' marked failed.`;
-    let treeCompletionStatus: object | undefined = undefined;
-    let archivedInfo: object | undefined = undefined;
+    const parentCompletionResult = await this._handleParentCompletion(
+      reqEntry,
+      task,
+      now,
+    );
+    message += parentCompletionResult.messageAugmentation;
+    const treeCompletionStatus = parentCompletionResult.treeCompletionStatus;
 
-    if (task.parentId) {
-      const parentTask = reqEntry.tasks.find((p) => p.id === task.parentId);
+    const allTasksInRequestTerminalOrSplit = reqEntry.tasks.every(
+      (t) =>
+        t.status === TaskStatus.Done ||
+        t.status === TaskStatus.Failed ||
+        t.status === TaskStatus.Split,
+    );
+    if (allTasksInRequestTerminalOrSplit && !reqEntry.completed) {
+      const nonSplitTasks = reqEntry.tasks.filter(
+        (t) => t.status !== TaskStatus.Split,
+      );
       if (
-        parentTask &&
-        (parentTask.status === TaskStatus.Pending ||
-          parentTask.status === TaskStatus.Active)
+        nonSplitTasks.every(
+          (t) => t.status === TaskStatus.Done || t.status === TaskStatus.Failed,
+        )
       ) {
-        const allSubtasksTerminal = parentTask.subtaskIds?.every((subId) => {
-          const sub = reqEntry.tasks.find((s) => s.id === subId);
-          return (
-            sub &&
-            (sub.status === TaskStatus.Done || sub.status === TaskStatus.Failed)
-          );
-        });
-        if (allSubtasksTerminal) {
-          parentTask.status = TaskStatus.Done;
-          parentTask.completedDetails =
-            "Automatically completed as all subtasks are terminal (some may have failed).";
-          parentTask.updatedAt = now;
-          message += ` Parent task '${parentTask.id}' auto-completed.`;
-          const taskMap = new Map(reqEntry.tasks.map((t) => [t.id, t]));
-          if (
-            this._areAllDescendantsStatus(parentTask, taskMap, TaskStatus.Done)
-          ) {
-            // Automatically archive the completed task tree
-            const archivedResult = await this._autoArchiveTaskTree(
-              requestId,
-              parentTask.id,
-            );
-            archivedInfo = {
-              taskTreeArchived: true,
-              rootTaskId: parentTask.id,
-              archivedTaskCount: archivedResult.archivedCount,
-              message: `Task tree rooted at '${parentTask.id}' automatically archived to completed_tasks.json.`,
-            };
-            message += ` Task tree automatically archived (${archivedResult.archivedCount} tasks).`;
-          }
-        }
+        reqEntry.completed = true;
+        message += ` All actionable tasks in request '${reqEntry.requestId}' are terminal. Request completed.`;
       }
     }
 
-    const allTasksInRequestTerminal = reqEntry.tasks.every(
-      (t) => t.status === TaskStatus.Done || t.status === TaskStatus.Failed,
-    );
-    if (allTasksInRequestTerminal && !reqEntry.completed) {
-      reqEntry.completed = true;
-      message += ` All tasks in request '${reqEntry.requestId}' are terminal. Request completed.`;
-    }
-
     await this._saveActiveTasksToFile();
-    const result: any = {
+    return {
       status: "task_marked_failed",
       message: `${message}\n${this._formatTaskProgressTable(requestId)}`,
       task: {
@@ -1087,17 +1095,8 @@ class TaskManagerServer {
         failureReason: task.failureReason,
       },
       requestCompleted: reqEntry.completed,
+      ...(treeCompletionStatus && { treeCompletionStatus }),
     };
-
-    if (treeCompletionStatus) {
-      result.treeCompletionStatus = treeCompletionStatus;
-    }
-
-    if (archivedInfo) {
-      result.archivedInfo = archivedInfo;
-    }
-
-    return result;
   }
 
   public async updateTask(
@@ -1585,6 +1584,287 @@ class TaskManagerServer {
     };
   }
 
+  // --- Phase 2 Methods: SplitTask and MergeTasks ---
+
+  public async splitTask(
+    params: z.infer<typeof SplitTaskSchema>,
+  ): Promise<object> {
+    this._assertInitialized();
+    const { requestId, taskIdToSplit, newSubtaskDefinitions } = params;
+    const reqEntry = this._getRequestEntryOrThrow(requestId);
+    const originalTask = this._getTaskOrThrow(reqEntry, taskIdToSplit);
+
+    if (
+      originalTask.status === TaskStatus.Done ||
+      originalTask.status === TaskStatus.Failed
+    ) {
+      throw new InvalidOperationError(
+        `Cannot split task '${taskIdToSplit}' as it is in a terminal status ('${originalTask.status}').`,
+      );
+    }
+    if (originalTask.status === TaskStatus.Split) {
+      throw new InvalidOperationError(
+        `Task '${taskIdToSplit}' has already been split. Add subtasks directly or split one of its existing subtasks.`,
+      );
+    }
+
+    const now = new Date().toISOString();
+    originalTask.status = TaskStatus.Split;
+    originalTask.title = `[SPLIT] ${originalTask.title}`;
+    originalTask.description = `(Original task split, work delegated to subtasks) ${originalTask.description}`;
+    originalTask.updatedAt = now;
+
+    if (!originalTask.subtaskIds) originalTask.subtaskIds = [];
+    const createdSubtasks: Partial<Task>[] = [];
+
+    for (const subDef of newSubtaskDefinitions) {
+      const newSubtaskId = this._generateTaskId();
+      const newSubtask: Task = {
+        id: newSubtaskId,
+        title: subDef.title,
+        description: subDef.description,
+        status: TaskStatus.Pending,
+        priority: subDef.priority || originalTask.priority,
+        type: subDef.type || originalTask.type || TaskType.Generic,
+        dependsOn: subDef.dependsOn || [],
+        parentId: originalTask.id,
+        artifactsGenerated: subDef.artifactsGenerated || [],
+        environmentContext:
+          subDef.environmentContext || originalTask.environmentContext,
+        createdAt: now,
+        updatedAt: now,
+        subtaskIds: [],
+        completedDetails: "",
+      };
+      reqEntry.tasks.push(newSubtask);
+      originalTask.subtaskIds.push(newSubtaskId);
+      createdSubtasks.push({
+        id: newSubtask.id,
+        title: newSubtask.title,
+        type: newSubtask.type,
+      });
+    }
+
+    reqEntry.updatedAt = now;
+    if (reqEntry.completed) reqEntry.completed = false;
+
+    await this._saveActiveTasksToFile();
+    return {
+      status: "task_split",
+      originalTaskId: originalTask.id,
+      newSubtasks: createdSubtasks,
+      message: `Task '${originalTask.title}' (ID: ${originalTask.id}) split into ${createdSubtasks.length} new subtasks.\n${this._formatTaskProgressTable(requestId)}`,
+    };
+  }
+
+  public async mergeTasks(
+    params: z.infer<typeof MergeTasksSchema>,
+  ): Promise<object> {
+    this._assertInitialized();
+    const {
+      requestId,
+      primaryTaskId,
+      taskIdsToMerge,
+      newTitle,
+      newDescription,
+      newPriority,
+      newType,
+      newEnvironmentContext,
+      newArtifactsGenerated,
+    } = params;
+
+    const reqEntry = this._getRequestEntryOrThrow(requestId);
+    const primaryTask = this._getTaskOrThrow(reqEntry, primaryTaskId);
+
+    if (taskIdsToMerge.includes(primaryTaskId)) {
+      throw new InvalidOperationError(
+        "Primary task ID cannot be in the list of tasks to merge.",
+      );
+    }
+    if (
+      primaryTask.status === TaskStatus.Done ||
+      primaryTask.status === TaskStatus.Failed ||
+      primaryTask.status === TaskStatus.Split
+    ) {
+      throw new InvalidOperationError(
+        `Primary task '${primaryTaskId}' is in a non-mergeable status ('${primaryTask.status}').`,
+      );
+    }
+
+    const now = new Date().toISOString();
+    const uniqueSubtaskIds = new Set<string>(primaryTask.subtaskIds || []);
+    const uniqueDependsOn = new Set<string>(primaryTask.dependsOn || []);
+    let combinedArtifacts = new Set<string>(
+      primaryTask.artifactsGenerated || [],
+    );
+    let combinedDescription = primaryTask.description;
+
+    for (const idToMerge of taskIdsToMerge) {
+      const taskToMerge = this._getTaskOrThrow(reqEntry, idToMerge);
+      if (
+        taskToMerge.status === TaskStatus.Done ||
+        taskToMerge.status === TaskStatus.Failed ||
+        taskToMerge.status === TaskStatus.Split
+      ) {
+        throw new InvalidOperationError(
+          `Task '${idToMerge}' cannot be merged as it's in a non-mergeable status ('${taskToMerge.status}').`,
+        );
+      }
+
+      if (taskToMerge.description) {
+        combinedDescription += `\n\n--- Merged from ${taskToMerge.id} (${taskToMerge.title}) ---\n${taskToMerge.description}`;
+      }
+
+      if (taskToMerge.subtaskIds) {
+        for (const subId of taskToMerge.subtaskIds) {
+          const subtask = reqEntry.tasks.find((t) => t.id === subId);
+          if (subtask) {
+            subtask.parentId = primaryTask.id;
+            subtask.updatedAt = now;
+            uniqueSubtaskIds.add(subId);
+          }
+        }
+      }
+      if (taskToMerge.dependsOn) {
+        taskToMerge.dependsOn.forEach((depId) => {
+          if (depId !== primaryTask.id) uniqueDependsOn.add(depId);
+        });
+      }
+      if (taskToMerge.artifactsGenerated) {
+        taskToMerge.artifactsGenerated.forEach((art) =>
+          combinedArtifacts.add(art),
+        );
+      }
+    }
+
+    primaryTask.title = newTitle || primaryTask.title;
+    primaryTask.description = newDescription || combinedDescription;
+    primaryTask.priority = newPriority || primaryTask.priority;
+    primaryTask.type = newType || primaryTask.type;
+    primaryTask.environmentContext =
+      newEnvironmentContext || primaryTask.environmentContext;
+    primaryTask.artifactsGenerated =
+      newArtifactsGenerated || Array.from(combinedArtifacts);
+    primaryTask.subtaskIds = Array.from(uniqueSubtaskIds);
+    primaryTask.dependsOn = Array.from(uniqueDependsOn);
+    primaryTask.updatedAt = now;
+
+    for (const task of reqEntry.tasks) {
+      if (task.id === primaryTask.id || taskIdsToMerge.includes(task.id))
+        continue;
+      if (task.dependsOn) {
+        let depsChanged = false;
+        const newDeps = new Set<string>(task.dependsOn);
+        task.dependsOn.forEach((depId) => {
+          if (taskIdsToMerge.includes(depId)) {
+            newDeps.delete(depId);
+            if (depId !== primaryTask.id) newDeps.add(primaryTask.id);
+            depsChanged = true;
+          }
+        });
+        if (depsChanged) {
+          task.dependsOn = Array.from(newDeps);
+          if (task.dependsOn.length === 0) delete task.dependsOn;
+          task.updatedAt = now;
+        }
+      }
+    }
+
+    reqEntry.tasks = reqEntry.tasks.filter(
+      (t) => !taskIdsToMerge.includes(t.id),
+    );
+    reqEntry.updatedAt = now;
+
+    await this._saveActiveTasksToFile();
+    return {
+      status: "tasks_merged",
+      primaryTaskId: primaryTask.id,
+      mergedTaskIds: taskIdsToMerge,
+      message: `Tasks ${taskIdsToMerge.join(", ")} merged into '${primaryTask.title}' (ID: ${primaryTask.id}).\n${this._formatTaskProgressTable(requestId)}`,
+    };
+  }
+
+  private async _handleParentCompletion(
+    reqEntry: RequestEntry,
+    changedTask: Task,
+    now: string,
+  ): Promise<{ messageAugmentation: string; treeCompletionStatus?: object }> {
+    let messageAugmentation = "";
+    let treeCompletionStatus: object | undefined = undefined;
+    const taskMap = new Map(reqEntry.tasks.map((t) => [t.id, t]));
+
+    const checkAndCompleteParent = async (currentTask: Task) => {
+      if (!currentTask.parentId) return;
+
+      const parentTask = taskMap.get(currentTask.parentId);
+      if (
+        parentTask &&
+        (parentTask.status === TaskStatus.Pending ||
+          parentTask.status === TaskStatus.Active ||
+          parentTask.status === TaskStatus.Split)
+      ) {
+        const allSubtasksTerminalOrSplit = parentTask.subtaskIds?.every(
+          (subId) => {
+            const sub = taskMap.get(subId);
+            return (
+              sub &&
+              (sub.status === TaskStatus.Done ||
+                sub.status === TaskStatus.Failed ||
+                sub.status === TaskStatus.Split)
+            );
+          },
+        );
+
+        if (allSubtasksTerminalOrSplit) {
+          parentTask.status = TaskStatus.Done;
+          parentTask.completedDetails =
+            parentTask.completedDetails ||
+            "Automatically completed as all subtasks are terminal or split.";
+          parentTask.updatedAt = now;
+          messageAugmentation += ` Parent task '${parentTask.id}' auto-completed.`;
+
+          await checkAndCompleteParent(parentTask);
+
+          if (
+            this._areAllDescendantsStatus(parentTask, taskMap, TaskStatus.Done)
+          ) {
+            treeCompletionStatus = {
+              isTreeFullyDone: true,
+              rootTaskId: parentTask.id,
+              message: `Task tree rooted at '${parentTask.id}' is now fully 'done'. Consider 'archive_task_tree'.`,
+              suggestedAction: {
+                toolName: "archive_task_tree",
+                params: {
+                  requestId: reqEntry.requestId,
+                  taskId: parentTask.id,
+                },
+              },
+            };
+          }
+        }
+      }
+    };
+
+    await checkAndCompleteParent(changedTask);
+
+    if (
+      !changedTask.parentId &&
+      !treeCompletionStatus &&
+      this._areAllDescendantsStatus(changedTask, taskMap, TaskStatus.Done)
+    ) {
+      treeCompletionStatus = {
+        isTreeFullyDone: true,
+        rootTaskId: changedTask.id,
+        message: `Task tree rooted at '${changedTask.id}' is now fully 'done'. Consider using 'archive_task_tree'.`,
+        suggestedAction: {
+          toolName: "archive_task_tree",
+          params: { requestId: reqEntry.requestId, taskId: changedTask.id },
+        },
+      };
+    }
+    return { messageAugmentation, treeCompletionStatus };
+  }
+
   // --- Formatting Helpers ---
   private _formatTaskProgressTable(requestId: string): string {
     const reqEntry = this.requestsMap.get(requestId); // No assert needed, internal helper
@@ -1612,6 +1892,7 @@ class TaskManagerServer {
         [TaskStatus.Done]: "✅",
         [TaskStatus.Failed]: "❌",
         [TaskStatus.RequiresClarification]: "❓",
+        [TaskStatus.Split]: "🔗",
       };
       const statusIcon = statusIcons[task.status] || "?";
       const prio = task.priority.substring(0, 1).toUpperCase();
@@ -1650,28 +1931,30 @@ class TaskManagerServer {
   private _formatRequestsList(): string {
     let output = "\nActive Requests List:\n";
     output +=
-      "| Request ID | Total | Done | Failed | Active | Pending | Clarify | Status    |\n";
+      "| Request ID | Total | Done | Failed | Active | Pending | Clarify | Split | Status    |\n";
     output +=
-      "|------------|-------|------|--------|--------|---------|---------|-----------|\n";
+      "|------------|-------|------|--------|--------|---------|---------|-------|-----------|\n";
 
     for (const req of this.requestsMap.values()) {
-      // No assert needed, internal helper
-      const counts = { done: 0, failed: 0, active: 0, pending: 0, clarify: 0 };
+      const counts: Record<TaskStatus | "total", number> = {
+        [TaskStatus.Done]: 0,
+        [TaskStatus.Failed]: 0,
+        [TaskStatus.Active]: 0,
+        [TaskStatus.Pending]: 0,
+        [TaskStatus.RequiresClarification]: 0,
+        [TaskStatus.Split]: 0,
+        total: 0,
+      };
       req.tasks.forEach((t) => {
-        if (t.status === TaskStatus.Done) counts.done++;
-        else if (t.status === TaskStatus.Failed) counts.failed++;
-        else if (t.status === TaskStatus.Active) counts.active++;
-        else if (t.status === TaskStatus.Pending) counts.pending++;
-        else if (t.status === TaskStatus.RequiresClarification)
-          counts.clarify++;
+        counts[t.status] = (counts[t.status] || 0) + 1;
+        counts.total++;
       });
-      const total = req.tasks.length;
       const status = req.completed
         ? "✅ Completed"
-        : total === 0
+        : counts.total === 0
           ? "⏳ Empty"
           : "🔄 In Prog";
-      output += `| ${req.requestId.padEnd(10)} | ${String(total).padEnd(5)} | ${String(counts.done).padEnd(4)} | ${String(counts.failed).padEnd(6)} | ${String(counts.active).padEnd(6)} | ${String(counts.pending).padEnd(7)} | ${String(counts.clarify).padEnd(7)} | ${status.padEnd(9)} |\n`;
+      output += `| ${req.requestId.padEnd(10)} | ${String(counts.total).padEnd(5)} | ${String(counts[TaskStatus.Done]).padEnd(4)} | ${String(counts[TaskStatus.Failed]).padEnd(6)} | ${String(counts[TaskStatus.Active]).padEnd(6)} | ${String(counts[TaskStatus.Pending]).padEnd(7)} | ${String(counts[TaskStatus.RequiresClarification]).padEnd(7)} | ${String(counts[TaskStatus.Split]).padEnd(5)} | ${status.padEnd(9)} |\n`;
     }
     return output;
   }
@@ -1703,6 +1986,8 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     REMOVE_SUBTASK_TOOL,
     ARCHIVE_TASK_TREE_TOOL,
     LOG_TASK_COMPLETION_SUMMARY_TOOL,
+    SPLIT_TASK_TOOL,
+    MERGE_TASKS_TOOL,
   ],
 }));
 
@@ -1748,6 +2033,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         taskManagerServer.logTaskCompletionSummary(
           LogTaskCompletionSummarySchema.parse(p),
         ),
+      [SPLIT_TASK_TOOL.name]: (p) =>
+        taskManagerServer.splitTask(SplitTaskSchema.parse(p)),
+      [MERGE_TASKS_TOOL.name]: (p) =>
+        taskManagerServer.mergeTasks(MergeTasksSchema.parse(p)),
     };
 
     const handler = toolHandlers[name];

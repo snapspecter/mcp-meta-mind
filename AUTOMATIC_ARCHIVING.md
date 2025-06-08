@@ -111,9 +111,9 @@ No configuration is required. Automatic archiving is enabled by default and work
 
 ## File Locations
 
-- **Active Tasks**: `~/dev/countradar/mcp_task_manager_data/tasks.json`
-- **Completed Tasks Archive**: `~/dev/countradar/mcp_task_manager_data/completed_tasks.json`
-- **Task Summaries**: `~/dev/countradar/mcp_task_manager_data/completed_task_summaries/`
+- **Active Tasks**: `~/.AgentTaskHub/mcp_task_manager_data/tasks.json`
+- **Completed Tasks Archive**: `~/.AgentTaskHub/mcp_task_manager_data/completed_tasks.json`
+- **Task Summaries**: `~/.AgentTaskHub/mcp_task_manager_data/completed_task_summaries/`
 
 ## Migration Notes
 
