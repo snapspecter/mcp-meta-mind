@@ -2,6 +2,58 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.0] - 2024-12-19
+
+### 🚀 Major: SQLite Database Migration
+
+**BREAKING CHANGE**: Migrated from JSON file storage to SQLite database backend for improved performance, reliability, and scalability.
+
+#### ✨ Added
+- **SQLite Database Backend**: Complete migration from JSON files to SQLite database
+- **Repository Pattern**: Clean separation of database operations from business logic
+- **Automatic Migration**: Seamless upgrade from v0.2.x with automatic data migration
+- **Migration Tools**: Standalone migration scripts and CLI tools
+- **Backup Safety**: Automatic backup of original JSON files during migration
+- **Enhanced Performance**: Significantly faster task queries and operations
+- **ACID Transactions**: Data integrity guaranteed with proper transaction management
+- **Better Concurrency**: WAL mode SQLite for improved concurrent access
+- **Database Indexes**: Optimized query performance with proper indexing
+
+#### 🔄 Changed
+- **Data Storage**: All data now stored in `~/.mcp_agent_task_hub/tasks.db`
+- **Internal Architecture**: Complete refactor using Repository Pattern
+- **Memory Usage**: Reduced memory footprint by eliminating in-memory JSON storage
+- **Error Handling**: Improved error handling with database constraints
+
+#### 🛡️ Security & Reliability
+- **Foreign Key Constraints**: Referential integrity enforced at database level
+- **Schema Validation**: Database schema ensures data consistency
+- **Automatic Rollback**: Failed operations don't corrupt data
+- **Backup Strategy**: Comprehensive backup during migration process
+
+#### 📚 Documentation
+- **SQLite Migration Guide**: Comprehensive migration documentation
+- **Implementation Summary**: Detailed technical implementation overview
+- **Updated README**: Migration information and new features
+
+#### 🔧 Technical Details
+- Uses `better-sqlite3` for high-performance SQLite operations
+- Modular codebase with separate concerns (database, repository, server)
+- Type-safe database operations with comprehensive TypeScript interfaces
+- Comprehensive test suite for migration and functionality validation
+
+#### 🎯 Migration
+- **Automatic**: First startup detects and migrates existing JSON data
+- **Manual Options**: `npm run migrate` or `mcp-agenttaskhub-migrate` CLI
+- **Backup**: Original files backed up to `~/.mcp_agent_task_hub/backup/`
+- **Zero Downtime**: Seamless upgrade process with data preservation
+
+#### ⚠️ Important Notes
+- First run after upgrade will perform automatic migration
+- Original JSON files are safely backed up before migration
+- All existing functionality preserved with improved performance
+- See [SQLITE_MIGRATION.md](SQLITE_MIGRATION.md) for detailed migration guide
+
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 

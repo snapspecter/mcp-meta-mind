@@ -2,6 +2,17 @@
 
 A sophisticated Model Context Protocol server for advanced task management and workflow orchestration. Built for KiloCode, it will work with Claude Desktop, RooCode and other MCP clients, this system provides intelligent task planning, hierarchical organization, automatic archiving, task summary generation and comprehensive progress tracking.
 
+## 📋 Important: SQLite Migration (v0.3.0+)
+
+**Starting with version 0.3.0, mcp-AgentTaskHub has migrated from JSON files to a SQLite database backend for improved performance and reliability.**
+
+- **Automatic Migration**: First run will automatically detect and migrate your existing JSON data
+- **Backup Safety**: Original files are backed up to `~/.mcp_agent_task_hub/backup/`
+- **Manual Migration**: Run `npm run migrate` if needed
+- **See**: [SQLite Migration Guide](SQLITE_MIGRATION.md) for detailed information
+
+If you're upgrading from a previous version, your data will be safely migrated on first startup.
+
 ## 🚀 Key Features
 
 ### ✨ **Intelligent Task Management**

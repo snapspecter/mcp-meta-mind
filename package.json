@@ -7,11 +7,13 @@
   "type": "module",
   "bin": {
     "mcp-agenttaskhub": "dist/index.js",
-    "mcp-agenttaskhub-setup": "setup-data-dir.js"
+    "mcp-agenttaskhub-setup": "setup-data-dir.js",
+    "mcp-agenttaskhub-migrate": "migrate.js"
   },
   "files": [
     "dist",
     "setup-data-dir.js",
+    "migrate.js",
     "AUTOMATIC_ARCHIVING.md",
     "EXAMPLE_WORKFLOW.md",
     "CHANGELOG.md",
@@ -22,7 +24,8 @@
     "prepare": "npm run build",
     "watch": "tsc --watch",
     "start": "tsx index.ts",
-    "setup": "node setup-data-dir.js"
+    "setup": "node setup-data-dir.js",
+    "migrate": "node migrate.js"
   },
   "repository": {
     "type": "git",
@@ -48,6 +51,7 @@
     "access": "public"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
     "@types/json-schema": "^7.0.15",
     "@types/node": "^20.11.0",
     "shx": "^0.3.4",
@@ -56,6 +60,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "0.5.0",
+    "better-sqlite3": "^11.10.0",
     "chalk": "^5.3.0",
     "glob": "^10.3.10",
     "zod": "^3.23.8",
