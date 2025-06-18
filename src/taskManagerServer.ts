@@ -32,9 +32,8 @@ import {
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";
-import { MigrationUtility } from "./migration.js";
 
-const DEFAULT_DATA_DIR = path.join(os.homedir(), ".mcp_agent_task_hub");
+const DEFAULT_DATA_DIR = path.join(os.homedir(), ".meta_mind");
 const COMPLETED_TASK_SUMMARIES_DIR_PATH = path.join(
   DEFAULT_DATA_DIR,
   "completed_task_summaries",
@@ -55,34 +54,8 @@ export class TaskManagerServer {
     await fs.mkdir(DEFAULT_DATA_DIR, { recursive: true });
     await fs.mkdir(COMPLETED_TASK_SUMMARIES_DIR_PATH, { recursive: true });
 
-    // Check for migration from old JSON files
-    const migration = new MigrationUtility();
-    if (await migration.isMigrationNeeded()) {
-      console.log(
-        "🔄 Old JSON files detected. Performing automatic migration to SQLite...",
-      );
-      const result = await migration.performMigration();
-
-      if (result.success) {
-        console.log("✅ Migration completed successfully!");
-        console.log(
-          `📊 Migrated: ${result.migratedRequests} requests, ${result.migratedTasks} active tasks, ${result.migratedArchivedTasks} archived tasks`,
-        );
-        console.log(
-          "💾 Original files backed up to ~/.mcp_agent_task_hub/backup/",
-        );
-      } else {
-        console.error("❌ Migration failed with errors:");
-        result.errors.forEach((error) => console.error(`  • ${error}`));
-        console.log(
-          "⚠️  Continuing with empty database. Check migration errors above.",
-        );
-      }
-    }
-
     this.isInitialized = true;
-
-    console.log("MCP-AgentTaskHub Server initialized with SQLite backend.");
+    console.log("Meta Mind MCP Server initialized with SQLite backend.");
     console.log(`Database path: ${this.taskRepository.constructor.name}`);
     console.log(
       `Task summaries directory: ${COMPLETED_TASK_SUMMARIES_DIR_PATH}`,

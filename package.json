@@ -1,39 +1,33 @@
 {
-  "name": "@snapspecter/mcp-AgentTaskHub",
-  "version": "0.3.0",
-  "description": "Advanced Model Context Protocol server for intelligent task management, workflow orchestration, and automatic archiving with hierarchical structures and agent specialization",
+  "name": "@snapspecter/mcp-meta-mind",
+  "version": "0.4.0",
+  "description": "Meta Mind MCP Server - Advanced Model Context Protocol server for intelligent task management, workflow orchestration, and automatic archiving with hierarchical structures and agent specialization",
   "author": "SnapSpecter",
   "main": "dist/index.js",
   "type": "module",
   "bin": {
-    "mcp-agenttaskhub": "dist/index.js",
-    "mcp-agenttaskhub-setup": "setup-data-dir.js",
-    "mcp-agenttaskhub-migrate": "migrate.js"
+    "mcp-meta-mind": "dist/index.js"
   },
   "files": [
     "dist",
-    "setup-data-dir.js",
-    "migrate.js",
     "AUTOMATIC_ARCHIVING.md",
     "EXAMPLE_WORKFLOW.md",
-    "CHANGELOG.md",
-    "MIGRATION_FROM_ORIGINAL.md"
+    "CHANGELOG.md"
   ],
   "scripts": {
     "build": "tsc && shx chmod +x dist/index.js",
     "prepare": "npm run build",
     "watch": "tsc --watch",
-    "start": "tsx index.ts",
-    "setup": "node setup-data-dir.js",
-    "migrate": "node migrate.js"
+    "start": "tsx index.ts"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/snapspecter/mcp-AgentTaskHub.git"
+    "url": "git+https://github.com/snapspecter/mcp-meta-mind.git"
   },
   "keywords": [
     "taskmanager",
     "mcp",
+    "meta-mind",
     "workflow",
     "orchestration",
     "hierarchical",
@@ -44,7 +38,9 @@
     "claude",
     "ai-tools",
     "task-planning",
-    "project-management"
+    "project-management",
+    "intelligent-agents",
+    "mind-management"
   ],
   "license": "MIT",
   "publishConfig": {
@@ -66,5 +62,10 @@
     "zod": "^3.23.8",
     "zod-to-json-schema": "^3.23.5"
   },
-  "packageManager": "pnpm@10.9.0+sha512.0486e394640d3c1fb3c9d43d49cf92879ff74f8516959c235308f5a8f62e2e19528a65cdc2a3058f587cde71eba3d5b56327c8c33a97e4c4051ca48a10ca2d5f"
+  "packageManager": "pnpm@10.9.0+sha512.0486e394640d3c1fb3c9d43d49cf92879ff74f8516959c235308f5a8f62e2e19528a65cdc2a3058f587cde71eba3d5b56327c8c33a97e4c4051ca48a10ca2d5f",
+  "types": "./dist/index.d.ts",
+  "bugs": {
+    "url": "https://github.com/snapspecter/mcp-meta-mind/issues"
+  },
+  "homepage": "https://github.com/snapspecter/mcp-meta-mind#readme"
 }

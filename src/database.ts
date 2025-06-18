@@ -1,11 +1,11 @@
-import Database from 'better-sqlite3';
-import * as path from 'node:path';
-import * as os from 'node:os';
-import * as fs from 'node:fs';
+import Database from "better-sqlite3";
+import * as path from "node:path";
+import * as os from "node:os";
+import * as fs from "node:fs";
 
 // Database configuration
-const DB_DIR = path.join(os.homedir(), '.mcp_agent_task_hub');
-const DB_PATH = path.join(DB_DIR, 'tasks.db');
+const DB_DIR = path.join(os.homedir(), ".meta_mind");
+const DB_PATH = path.join(DB_DIR, "tasks.db");
 
 let db: Database.Database;
 
@@ -13,7 +13,7 @@ let db: Database.Database;
  * Creates the database schema with all necessary tables and indexes
  */
 const createSchema = () => {
-    db.exec(`
+  db.exec(`
         -- Requests table to store high-level request information
         CREATE TABLE IF NOT EXISTS requests (
             requestId TEXT PRIMARY KEY,
@@ -99,7 +99,7 @@ const createSchema = () => {
             ('lastTaskId', '0', datetime('now'));
     `);
 
-    console.log('Database schema initialized successfully.');
+  console.log("Database schema initialized successfully.");
 };
 
 /**
@@ -107,52 +107,52 @@ const createSchema = () => {
  * @returns Database instance
  */
 export const getDb = (): Database.Database => {
-    if (!db) {
-        try {
-            // Ensure directory exists
-            fs.mkdirSync(DB_DIR, { recursive: true });
+  if (!db) {
+    try {
+      // Ensure directory exists
+      fs.mkdirSync(DB_DIR, { recursive: true });
 
-            // Create database connection
-            db = new Database(DB_PATH);
+      // Create database connection
+      db = new Database(DB_PATH);
 
-            // Set pragmas for better performance and reliability
-            db.pragma('journal_mode = WAL'); // Write-Ahead Logging for better concurrency
-            db.pragma('foreign_keys = ON'); // Enforce foreign key constraints
-            db.pragma('synchronous = NORMAL'); // Good balance of safety and performance
-            db.pragma('cache_size = 10000'); // Larger cache for better performance
+      // Set pragmas for better performance and reliability
+      db.pragma("journal_mode = WAL"); // Write-Ahead Logging for better concurrency
+      db.pragma("foreign_keys = ON"); // Enforce foreign key constraints
+      db.pragma("synchronous = NORMAL"); // Good balance of safety and performance
+      db.pragma("cache_size = 10000"); // Larger cache for better performance
 
-            // Create schema
-            createSchema();
+      // Create schema
+      createSchema();
 
-            console.log(`Database initialized at: ${DB_PATH}`);
-        } catch (error) {
-            console.error('Failed to initialize database:', error);
-            throw error;
-        }
+      console.log(`Database initialized at: ${DB_PATH}`);
+    } catch (error) {
+      console.error("Failed to initialize database:", error);
+      throw error;
     }
-    return db;
+  }
+  return db;
 };
 
 /**
  * Closes the database connection
  */
 export const closeDb = (): void => {
-    if (db) {
-        db.close();
-        console.log('Database connection closed.');
-    }
+  if (db) {
+    db.close();
+    console.log("Database connection closed.");
+  }
 };
 
 /**
  * Gets the database file path for reference
  */
 export const getDbPath = (): string => {
-    return DB_PATH;
+  return DB_PATH;
 };
 
 /**
  * Checks if the database file exists
  */
 export const dbExists = (): boolean => {
-    return fs.existsSync(DB_PATH);
+  return fs.existsSync(DB_PATH);
 };

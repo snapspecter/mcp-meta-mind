@@ -34,8 +34,8 @@ import {
 // Create MCP server
 const server = new Server(
   {
-    name: "mcp-agenttaskhub",
-    version: "0.3.0",
+    name: "mcp-meta-mind",
+    version: "0.4.0",
   },
   {
     capabilities: {
@@ -348,10 +348,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       default:
-        throw new McpError(
-          ErrorCode.MethodNotFound,
-          `Unknown tool: ${name}`,
-        );
+        throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${name}`);
     }
   } catch (error) {
     if (error instanceof Error) {
@@ -368,7 +365,7 @@ async function runServer() {
   const transport = new StdioServerTransport();
   await taskManagerServer.init();
   await server.connect(transport);
-  console.error("MCP-AgentTaskHub server running with SQLite backend");
+  console.error("Meta Mind MCP Server running with SQLite backend");
 }
 
 runServer().catch((error) => {

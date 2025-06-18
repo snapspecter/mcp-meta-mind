@@ -3,7 +3,7 @@
     "taskmanager": {
       "command": "tsx",
       "args": ["./index.ts"],
-      "cwd": "$PROJECT_ROOT/mcp-AgentTaskHub"
+      "cwd": "$PROJECT_ROOT/mcp-meta-mind"
     }
   }
 }

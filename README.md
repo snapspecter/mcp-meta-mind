@@ -1,241 +1,263 @@
-# MCP AgentTaskHub
+# Meta Mind MCP Server
 
-A sophisticated Model Context Protocol server for advanced task management and workflow orchestration. Built for KiloCode, it will work with Claude Desktop, RooCode and other MCP clients, this system provides intelligent task planning, hierarchical organization, automatic archiving, task summary generation and comprehensive progress tracking.
+A sophisticated Model Context Protocol (MCP) server that implements intelligent task management and workflow orchestration with hierarchical task structures, automatic archiving, and comprehensive progress tracking.
 
-## 📋 Important: SQLite Migration (v0.3.0+)
+## What is Meta Mind MCP Server?
 
-**Starting with version 0.3.0, mcp-AgentTaskHub has migrated from JSON files to a SQLite database backend for improved performance and reliability.**
+Meta Mind MCP Server is a technical implementation of the Model Context Protocol that provides advanced task management capabilities for AI agents. It serves as a centralized task orchestration system that can be integrated with various MCP clients including Claude Desktop, KiloCode, RooCode, and other compatible systems.
 
-- **Automatic Migration**: First run will automatically detect and migrate your existing JSON data
-- **Backup Safety**: Original files are backed up to `~/.mcp_agent_task_hub/backup/`
-- **Manual Migration**: Run `npm run migrate` if needed
-- **See**: [SQLite Migration Guide](SQLITE_MIGRATION.md) for detailed information
+## What It Does
 
-If you're upgrading from a previous version, your data will be safely migrated on first startup.
+The server provides a comprehensive suite of tools for:
 
-## 🚀 Key Features
+- **Task Planning & Organization**: Creates and manages hierarchical task structures with complex dependencies
+- **Workflow Orchestration**: Coordinates task execution across multiple concurrent projects
+- **Progress Tracking**: Monitors task completion, generates analytics, and provides real-time status updates  
+- **Artifact Management**: Logs and tracks generated files, code, documentation, and other outputs
+- **Automatic Archiving**: Intelligently archives completed task trees to maintain clean active workspaces
+- **Summary Generation**: Creates detailed markdown summaries of completed work with reasoning and artifacts
 
-### ✨ **Intelligent Task Management**
-- **Automatic Task Archiving**: Completed task trees are automatically moved to archive when all descendants are done
-- **Hierarchical Task Structure**: Support for complex parent-child relationships and nested subtasks
-- **Smart Task Dependencies**: Dependency validation with cycle detection and resolution ordering
-- **Multi-Request Handling**: Manage multiple concurrent projects with isolated task queues
+## Problems It Solves
 
-### 🎯 **Advanced Task Features**
-- **Rich Task Types**: Specialized types (Code, Debug, Test, Plan, Refactor, Documentation, Research, Generic) for agent specialization
-- **Refined Priority System**: High/Medium/Low priorities for intelligent task scheduling
-- **Artifact Logging**: Track generated files, code, documentation, and other outputs
-- **Environment Context**: Maintain context across related tasks
-- **Task Summary Generation**: Automatic markdown summaries for completed work
+### 1. **Task Complexity Management**
+Traditional task management systems fail when dealing with complex, interdependent tasks that AI agents need to execute. Meta Mind provides:
+- Hierarchical task breakdown with unlimited nesting levels
+- Dependency validation with cycle detection
+- Intelligent task ordering based on dependencies and priorities
 
-### 📊 **Progress & Analytics**
-- **Visual Progress Tables**: Real-time status tracking with hierarchical display
-- **Request Overview**: Comprehensive dashboards for all active projects
-- **Completion Analytics**: Detailed metrics on task completion and timelines
-- **Status Reporting**: Clear visibility into project health and bottlenecks
+### 2. **Multi-Project Coordination**
+AI agents often work on multiple projects simultaneously. Meta Mind addresses this by:
+- Isolated task queues for different projects/requests
+- Cross-project resource and dependency management
+- Intelligent context switching between active projects
 
-### 🔄 **Workflow Automation**
-- **Automatic State Management**: Tasks auto-transition based on dependencies and completion
-- **Smart Parent-Child Logic**: Parent tasks auto-complete when all children are done
-- **Intelligent Next Task Selection**: Priority-based and dependency-aware task queuing
-- **Request Lifecycle Management**: Automatic request completion detection
+### 3. **Progress Visibility**
+Without proper tracking, it's difficult to understand what AI agents have accomplished. Meta Mind provides:
+- Real-time progress dashboards with hierarchical task views
+- Completion analytics and performance metrics
+- Detailed artifact logging with full traceability
 
-## 🚀 Quick Start
+### 4. **Knowledge Retention**
+AI agents often lose context between sessions. Meta Mind maintains:
+- Persistent task state across sessions
+- Comprehensive artifact and output logging
+- Task completion summaries with reasoning documentation
+
+## Core Features
+
+### Task Management
+- **18 comprehensive tools** for complete task lifecycle management
+- **Hierarchical task structures** with parent-child relationships
+- **Smart dependency management** with validation and cycle detection
+- **Priority-based scheduling** (High, Medium, Low, Critical)
+- **Task type specialization** for agent routing (Code, Debug, Test, Plan, Refactor, Documentation, Research, Generic)
+
+### Data Persistence
+- **SQLite backend** for reliable data storage and performance
+- **Automatic database initialization** with schema management
+- **Artifact tracking** with file path logging and metadata
+- **Task completion summaries** stored as markdown files
+
+### Workflow Automation
+- **Automatic task archiving** when complete task trees are finished
+- **Intelligent next task selection** based on dependencies and priorities
+- **Parent task auto-completion** when all children are done
+- **Request lifecycle management** with automatic completion detection
+
+### Analytics & Reporting
+- **Progress tables** with hierarchical display
+- **Request overview dashboards** showing project health
+- **Completion metrics** with timeline tracking
+- **Status reporting** for bottleneck identification
+
+## Available Tools
+
+| Tool | Purpose |
+|------|---------|
+| `request_planning` | Create new project requests with task breakdowns |
+| `get_next_task` | Intelligent next task selection based on priorities and dependencies |
+| `mark_task_done` | Complete tasks with artifact logging and automatic archiving |
+| `mark_task_failed` | Handle task failures with retry strategies |
+| `open_task_details` | Deep dive into specific task information |
+| `list_requests` | Overview of all active projects and their status |
+| `add_tasks_to_request` | Dynamically add tasks to existing projects |
+| `update_task` | Modify task properties, priorities, and metadata |
+| `add_dependency` / `remove_dependency` | Manage task relationships |
+| `validate_dependencies` | Ensure dependency graphs are valid |
+| `delete_task` | Remove tasks and their descendants |
+| `add_subtask` / `remove_subtask` | Manage hierarchical task structures |
+| `archive_task_tree` | Manual archiving of completed task trees |
+| `log_task_completion_summary` | Generate detailed markdown summaries |
+| `split_task` | Break down complex tasks into manageable subtasks |
+| `merge_tasks` | Combine related tasks for better organization |
+
+## Installation & Setup
 
 ### Prerequisites
 - Node.js 18+
-- KiloCode, RooCode, Claude Desktop, etc.
+- Compatible MCP client (Claude Desktop, KiloCode, RooCode, etc.)
 
 ### Installation
-
 ```bash
-npm install -g @snapspecter/mcp-AgentTaskHub
+npm install -g @snapspecter/mcp-meta-mind
 ```
 
-### Configuration
+### Data Directory Setup
+```bash
+mkdir -p ~/.meta_mind/mcp_task_manager_data
+```
 
-1. **Add server to your configuration**
--  **Add MCP Server Configuration**:
+## Configuration
+
+### MCP Client Connection Strings
+
+#### Global Installation (Recommended)
 ```json
 {
   "mcpServers": {
-    "taskmanager": {
+    "meta-mind": {
       "command": "npx",
-      "args": ["-y", "@snapspecter/mcp-AgentTaskHub"]
+      "args": ["-y", "@snapspecter/mcp-meta-mind"]
     }
   }
 }
 ```
 
-2. **Create Data Directory**:
-```bash
-mkdir -p ~/.AgentTaskHub/mcp_task_manager_data
+#### Direct Executable Path
+```json
+{
+  "mcpServers": {
+    "meta-mind": {
+      "command": "/path/to/mcp-meta-mind/dist/index.js"
+    }
+  }
+}
 ```
 
-f you encounter issues, see [TROUBLESHOOTING.md](./TROUBLESHOOTING.md).
+#### Development Setup (Local Build)
+```json
+{
+  "mcpServers": {
+    "meta-mind-dev": {
+      "command": "node",
+      "args": ["dist/index.js"],
+      "cwd": "/absolute/path/to/mcp-meta-mind"
+    }
+  }
+}
+```
 
-## 🛠️ Core Tools & Capabilities
+#### Development Setup (TypeScript)
+```json
+{
+  "mcpServers": {
+    "meta-mind-dev": {
+      "command": "tsx",
+      "args": ["./index.ts"],
+      "cwd": "/absolute/path/to/mcp-meta-mind"
+    }
+  }
+}
+```
 
-### Planning & Organization
-- **`request_planning`**: Create new project requests with task breakdowns
-- **`add_tasks_to_request`**: Dynamically add tasks to existing projects
-- **`add_subtask`**: Create hierarchical task structures
-- **`update_task`**: Modify task properties, priorities, and metadata
+## Technical Architecture
 
-### Execution & Progress
-- **`get_next_task`**: Intelligent next task selection based on priorities and dependencies
-- **`mark_task_done`**: Complete tasks with artifact logging and automatic archiving
-- **`mark_task_failed`**: Handle task failures with retry strategies
-- **`list_requests`**: Overview of all active projects and their status
+### Database Schema
+- **SQLite backend** with automatic schema initialization
+- **Tasks table** storing hierarchical task data with relationships
+- **Requests table** managing project-level information
+- **Artifacts table** tracking generated files and outputs
 
-### Advanced Management
-- **`add_dependency`** / **`remove_dependency`**: Manage task relationships
-- **`validate_dependencies`**: Ensure dependency graphs are valid
-- **`archive_task_tree`**: Manual archiving of completed task trees (also automatic)
-- **`log_task_completion_summary`**: Generate detailed markdown summaries
-- **`open_task_details`**: Deep dive into specific task information
+### File Structure
+```
+~/.meta_mind/
+├── tasks.db                   # SQLite database
+└── completed_task_summaries/  # Generated task summary files
+```
 
-## 📚 Documentation
+### Task States
+- `pending`: Ready to be worked on
+- `active`: Currently being executed
+- `done`: Successfully completed
+- `failed`: Failed with retry options
+- `requires-clarification`: Needs additional information
 
-- **[Automatic Archiving Guide](./AUTOMATIC_ARCHIVING.md)**: Complete guide to automatic task archiving
-- **[Example Workflows](./EXAMPLE_WORKFLOW.md)**: Real-world usage examples and patterns
-- **[Changelog](./CHANGELOG.md)**: Version history and feature updates
-- **[Troubleshooting](./TROUBLESHOOTING.md)**: Common issues and solutions
+## Development
 
-## 🔮 Upcoming Features
-
-We're continuously improving MCP AgentTaskHub with exciting new capabilities:
-
-- **`split_task` Tool**: Intelligently break down complex tasks into manageable subtasks
-- **`merge_tasks` Tool**: Combine related tasks for better organization and efficiency
-- **Enhanced Agent Specialization**: Improved task routing based on agent capabilities
-- **Advanced Analytics Dashboard**: Comprehensive project metrics and insights
-- **Template System**: Pre-built task templates for common workflows
-- **Integration APIs**: Connect with external project management tools
-
-## 🏗️ Development Setup
-
-### Local Development
-
+### Local Development Setup
 ```bash
-# Clone the repository
-git clone https://github.com/snapspecter/mcp-AgentTaskHub.git
-cd mcp-AgentTaskHub
+# Clone repository
+git clone https://github.com/snapspecter/mcp-meta-mind.git
+cd mcp-meta-mind
 
 # Install dependencies
 npm install
 
+# Build project
+npm run build
+
 # Start development server
 npm run start
+```
 
-# Build for production
+### Building for Production
+```bash
 npm run build
 ```
 
-### Development Configuration
+## Upcoming Features (Next Release)
 
-Create a development configuration in your client:
+### Advanced Reasoning Engine
+The next major release will introduce sophisticated AI reasoning capabilities that enhance decision-making transparency and task execution quality.
 
-```json
-{
-  "mcpServers": {
-    "taskmanager-dev": {
-      "command": "tsx",
-      "args": ["./index.ts"],
-      "cwd": "/absolute/path/to/mcp-AgentTaskHub"
-    }
-  }
-}
-```
+#### Multi-Modal Reasoning
+- **Sequential Thinking**: Step-by-step logical progression through complex problems
+- **Chain of Thought (CoT)**: Detailed reasoning chains with intermediate steps and validation
+- **Chain of Density (CoD)**: Iterative refinement of solutions with increasing detail and accuracy
 
-## 📁 Project Structure
+#### Reasoning Transparency & Audit Trail
+AI agents will have complete reasoning transparency with comprehensive logging systems that capture:
+- **Decision Point Analysis**: Why specific approaches were chosen over alternatives
+- **Problem Decomposition Logic**: How complex tasks were broken down into manageable components  
+- **Dependency Resolution Reasoning**: The logic behind task ordering and dependency management
+- **Priority Assessment Rationale**: Detailed explanations for task prioritization decisions
+- **Failure Analysis**: Root cause analysis and learning from failed attempts
 
-```
-~/dev/countradar/mcp_task_manager_data/
-├── tasks.json                 # Active tasks and requests
-├── completed_tasks.json       # Archived completed task trees
-└── completed_task_summaries/  # Generated task summary files
-```
+This reasoning audit trail enables:
+- **Debugging AI Decision Making**: Understand exactly why an agent made specific choices
+- **Performance Optimization**: Identify patterns in successful vs. unsuccessful reasoning approaches
+- **Knowledge Transfer**: Reuse successful reasoning patterns across similar problems
+- **Continuous Improvement**: Refine agent behavior based on reasoning outcome analysis
 
-## 🎯 Task Types & Priorities
+#### Web-Based Management Interface
+A lightweight web server will provide comprehensive task management capabilities:
 
-### Task Types (Optimized for Agent Specialization)
-- **Code**: Implementation, coding, development work
-- **Debug**: Bug fixes, troubleshooting, issue resolution
-- **Test**: Testing, validation, quality assurance
-- **Plan**: Planning, architecture, design work
-- **Refactor**: Code improvement, optimization, cleanup
-- **Documentation**: Writing docs, comments, guides
-- **Research**: Investigation, analysis, learning
-- **Generic**: General tasks not fitting other categories
+**Dashboard Features**:
+- **Interactive Task Browser**: Navigate hierarchical task structures with expandable trees
+- **Real-Time Progress Visualization**: Dynamic progress bars, completion charts, and timeline views
+- **Task Editor**: Create, modify, and delete tasks with rich form interfaces
+- **Dependency Graph Visualization**: Interactive network diagrams showing task relationships
 
-### Priority Levels
-- **High**: Critical path items, blockers, urgent work
-- **Medium**: Important but not urgent, standard workflow items
-- **Low**: Nice-to-have, optimization, future enhancements
+**Reasoning Insights**:
+- **Decision Timeline**: Step-by-step visualization of AI reasoning processes
+- **Alternative Path Analysis**: View other approaches considered but not taken
+- **Reasoning Quality Scores**: Metrics on reasoning depth, accuracy, and completeness
+- **Pattern Recognition**: Identify common reasoning patterns and success factors
 
-## 📊 Example Usage
+**Artifact Management**:
+- **Generated Content Gallery**: Browse all files, code, and documentation created by AI agents
+- **Artifact Relationships**: See how generated content relates to specific tasks and reasoning steps
+- **Version Control Integration**: Track changes and evolution of generated artifacts
+- **Export & Sharing**: Download artifacts and reasoning summaries for external use
 
-### Creating a Complex Project
-```json
-{
-  "tool": "request_planning",
-  "params": {
-    "originalRequest": "Build a full-stack e-commerce application",
-    "tasks": [
-      {
-        "title": "Database Design",
-        "description": "Design and implement the database schema",
-        "priority": "high",
-        "type": "plan"
-      },
-      {
-        "title": "API Development",
-        "description": "Build REST API endpoints",
-        "priority": "high",
-        "type": "code",
-        "dependsOn": ["task-1"]
-      },
-      {
-        "title": "Frontend Implementation",
-        "description": "Create React frontend components",
-        "priority": "medium",
-        "type": "code"
-      }
-    ]
-  }
-}
-```
-
-### Task Completion with Artifacts
-```json
-{
-  "tool": "mark_task_done",
-  "params": {
-    "requestId": "req-1",
-    "taskId": "task-1",
-    "completedDetails": "Database schema implemented with user authentication tables",
-    "artifactsGenerated": [
-      "schema.sql",
-      "migration_001_users.sql",
-      "database_diagram.png"
-    ]
-  }
-}
-```
-
-## 🙏 Acknowledgments
-
-This project was inspired by [BennyDaBall930/sub_TaskManager](https://github.com/BennyDaBall930/sub_TaskManager). It's been refactored and optimized, and I enhanced the original concept to create a comprehensive task management solution with advanced features like automatic archiving, hierarchical task structures, intelligent dependency management, task summary generationand agent specialization capabilities.
-
-## 📝 License
+## License
 
 MIT License - see [LICENSE](./LICENSE) file for details.
 
-## 🤝 Contributing
+## Contributing
 
-We welcome contributions! Submit a pull request!
+Contributions are welcome! Please submit pull requests with appropriate tests and documentation.
 
 ---
 
-**MCP AgentTaskHub** - Empowering intelligent agents with sophisticated task management capabilities.
+**Meta Mind MCP Server** - Advanced task orchestration for intelligent AI agents.

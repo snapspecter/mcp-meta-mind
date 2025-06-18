@@ -2,7 +2,7 @@
   "tools": {
     "taskmanager": {
       "command": "npx",
-      "args": ["-y", "@snapspecter/mcp-AgentTaskHub"]
+      "args": ["-y", "@snapspecter/mcp-meta-mind"]
     }
   }
 }

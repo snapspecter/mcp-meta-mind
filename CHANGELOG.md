@@ -2,66 +2,79 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.3.0] - 2024-12-19
+## [0.4.0] - 2025-06-18
 
-### 🚀 Major: SQLite Database Migration
+### 🧹 Cleanup & Documentation
 
-**BREAKING CHANGE**: Migrated from JSON file storage to SQLite database backend for improved performance, reliability, and scalability.
+**ENHANCEMENT**: Major cleanup release with improved documentation and streamlined codebase.
 
-#### ✨ Added
-- **SQLite Database Backend**: Complete migration from JSON files to SQLite database
+#### 📚 Documentation Improvements
+- **Technical README**: Completely rewritten as technical documentation instead of marketing content
+- **Feature Documentation**: Comprehensive listing of all 18 available tools
+- **Connection Examples**: All possible MCP client connection configurations provided
+- **Architecture Overview**: Detailed technical implementation summary
+- **Problem-Solution Mapping**: Clear explanation of problems solved by Meta Mind
+
+#### 🚀 Upcoming Features Preview
+- **Advanced Reasoning Engine**: Multi-modal reasoning with Sequential Thinking, Chain of Thought (CoT), and Chain of Density (CoD)
+- **Reasoning Transparency**: Complete audit trail of AI decision-making processes
+- **Web Management Interface**: Browser-based task management and reasoning visualization
+- **Artifact Gallery**: Visual browsing of all generated content and outputs
+
+#### 🧹 Codebase Cleanup
+- **Removed Migration Code**: Eliminated all migration-related code and files
+- **Removed Obsolete Files**: Cleaned up unused configuration and setup files
+- **Streamlined Package**: Reduced published package size and complexity
+- **Self-Contained Setup**: Fully automatic initialization with zero manual configuration
+
+#### 🔧 Technical Improvements
+- **Simplified Architecture**: Cleaner codebase with removed legacy components
+- **Better Organization**: Improved project structure and file organization
+- **Enhanced Reliability**: More robust initialization and error handling
+
+## [0.3.0] - 2025-06-17
+
+### 🚀 Major: SQLite Database Backend
+
+**ENHANCEMENT**: Implemented SQLite database backend for improved performance, reliability, and scalability.
+
+#### 🗄️ Database & Storage
+- **SQLite Database Backend**: Robust database storage with automatic initialization
 - **Repository Pattern**: Clean separation of database operations from business logic
-- **Automatic Migration**: Seamless upgrade from v0.2.x with automatic data migration
-- **Migration Tools**: Standalone migration scripts and CLI tools
-- **Backup Safety**: Automatic backup of original JSON files during migration
+- **Schema Management**: Automatic database initialization and schema creation
 - **Enhanced Performance**: Significantly faster task queries and operations
+- **Data Integrity**: Improved data consistency and relationship management
 - **ACID Transactions**: Data integrity guaranteed with proper transaction management
 - **Better Concurrency**: WAL mode SQLite for improved concurrent access
 - **Database Indexes**: Optimized query performance with proper indexing
 
-#### 🔄 Changed
-- **Data Storage**: All data now stored in `~/.mcp_agent_task_hub/tasks.db`
+#### 🔄 Architecture Improvements
+- **Data Storage**: All data now stored in `~/.meta_mind/tasks.db`
 - **Internal Architecture**: Complete refactor using Repository Pattern
-- **Memory Usage**: Reduced memory footprint by eliminating in-memory JSON storage
+- **Memory Usage**: Reduced memory footprint with efficient database operations
 - **Error Handling**: Improved error handling with database constraints
 
 #### 🛡️ Security & Reliability
 - **Foreign Key Constraints**: Referential integrity enforced at database level
 - **Schema Validation**: Database schema ensures data consistency
 - **Automatic Rollback**: Failed operations don't corrupt data
-- **Backup Strategy**: Comprehensive backup during migration process
-
-#### 📚 Documentation
-- **SQLite Migration Guide**: Comprehensive migration documentation
-- **Implementation Summary**: Detailed technical implementation overview
-- **Updated README**: Migration information and new features
+- **Data Persistence**: Reliable data storage across sessions
 
 #### 🔧 Technical Details
 - Uses `better-sqlite3` for high-performance SQLite operations
 - Modular codebase with separate concerns (database, repository, server)
 - Type-safe database operations with comprehensive TypeScript interfaces
-- Comprehensive test suite for migration and functionality validation
+- Comprehensive test coverage for all database operations
 
-#### 🎯 Migration
-- **Automatic**: First startup detects and migrates existing JSON data
-- **Manual Options**: `npm run migrate` or `mcp-agenttaskhub-migrate` CLI
-- **Backup**: Original files backed up to `~/.mcp_agent_task_hub/backup/`
-- **Zero Downtime**: Seamless upgrade process with data preservation
+#### 📚 Documentation
+- **Implementation Summary**: Detailed technical implementation overview
+- **Updated README**: Enhanced technical documentation and setup instructions
+- **Example Workflows**: Real-world usage examples and patterns
 
-#### ⚠️ Important Notes
-- First run after upgrade will perform automatic migration
-- Original JSON files are safely backed up before migration
-- All existing functionality preserved with improved performance
-- See [SQLITE_MIGRATION.md](SQLITE_MIGRATION.md) for detailed migration guide
-
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-
-## [0.3.0] - 2024-01-15
+## [0.2.0] - 2025-06-10
 
 ### Added
-- **Automatic Task Tree Archiving**: Completed task trees are now automatically moved to `completed_tasks.json` without requiring manual intervention
-  - Tasks are auto-archived when all descendants in a task tree are marked as "done"
+- **Automatic Task Tree Archiving**: Completed task trees are automatically archived when all descendants are marked as "done"
   - Triggered by `mark_task_done` and `mark_task_failed` operations
   - Preserves all task relationships, metadata, and artifacts
   - Only complete task trees are archived (never individual subtasks)
@@ -81,10 +94,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Task trees are only archived when the root task and ALL descendants are "done"
 - Failed subtasks don't prevent archiving if parent task completes
 
-## [0.2.0] - 2024-01-10
+## [0.1.0] - 2025-06-10
 
 ### Added
-- Initial release of MCP AgentTaskHub
+- Initial release of Meta Mind MCP Server
 - Task planning and management system
 - Hierarchical task support with parent-child relationships
 - Task dependencies and validation
@@ -93,20 +106,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Progress tracking and status reporting
 - Multiple request handling
 
-### Core Tools
-- `request_planning` - Create new requests with tasks
-- `get_next_task` - Get next actionable task
-- `mark_task_done` - Mark tasks as completed
-- `mark_task_failed` - Mark tasks as failed
-- `update_task` - Update task properties
-- `add_subtask` - Add child tasks
+#### Core Tools (18 total)
+- `request_planning` - Create new requests with task breakdowns
+- `get_next_task` - Intelligent next task selection
+- `mark_task_done` - Mark tasks as completed with artifact logging
+- `mark_task_failed` - Mark tasks as failed with retry strategies
+- `update_task` - Update task properties and metadata
+- `add_subtask` / `remove_subtask` - Manage hierarchical structures
+- `add_dependency` / `remove_dependency` - Manage task relationships
+- `validate_dependencies` - Ensure dependency graph validity
 - `archive_task_tree` - Manually archive completed trees
+- `log_task_completion_summary` - Generate detailed summaries
 - `list_requests` - View all active requests
-- Task dependency management tools
+- `open_task_details` - Deep dive into task information
+- `delete_task` - Remove tasks and descendants
+- `split_task` - Break down complex tasks
+- `merge_tasks` - Combine related tasks
 
-### Infrastructure
+#### Infrastructure
 - TypeScript implementation with full type safety
 - Zod schema validation for all inputs
-- Persistent JSON file storage
-- MCP protocol compliance
-- Error handling and validation
+- MCP protocol compliance with v0.5.0 SDK
+- Comprehensive error handling and validation
+- Task type specialization for agent routing
+- Priority-based task scheduling
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).

@@ -1,17 +1,17 @@
-# Troubleshooting MCP-AgentTaskHub
+# Troubleshooting Meta Mind MCP Server
 
-This guide helps resolve common issues when using the MCP-AgentTaskHub server with Claude Desktop or other MCP clients.
+This guide helps resolve common issues when using the Meta Mind MCP Server with Claude Desktop or other MCP clients.
 
 ## "Failed to start server" Error
 
-If you encounter a "Failed to start server" error when trying to use the AgentTaskHub, here are steps to resolve it:
+If you encounter a "Failed to start server" error when trying to use the Meta Mind MCP Server, here are steps to resolve it:
 
 ### 1. Check Installation
 
 First, ensure the package is properly installed:
 
 ```bash
-npm install -g @snapspecter/mcp-AgentTaskHub
+npm install -g @snapspecter/mcp-meta-mind
 ```
 
 ### 2. Verify Configuration
@@ -24,7 +24,7 @@ The correct configuration should look like:
   "tools": {
     "taskmanager": {
       "command": "npx",
-      "args": ["-y", "@snapspecter/mcp-AgentTaskHub"]
+      "args": ["-y", "@snapspecter/mcp-meta-mind"]
     }
   }
 }
@@ -35,7 +35,7 @@ The correct configuration should look like:
 Ensure the package is executable:
 
 ```bash
-chmod +x $(which mcp-agenttaskhub)
+chmod +x $(which mcp-meta-mind)
 ```
 
 ### 4. Manual Execution Test
@@ -43,7 +43,7 @@ chmod +x $(which mcp-agenttaskhub)
 Try running the server manually to see any error messages:
 
 ```bash
-npx @snapspecter/mcp-AgentTaskHub
+npx @snapspecter/mcp-meta-mind
 ```
 
 If this produces errors, please copy them for troubleshooting.
@@ -51,12 +51,12 @@ If this produces errors, please copy them for troubleshooting.
 ### 5. Data Directory Issues
 
 The server stores task data in a directory. By default, this is:
-`~/.AgentTaskHub/mcp_task_manager_data`
+`~/.meta_mind/mcp_task_manager_data`
 
 You might need to create this directory:
 
 ```bash
-mkdir -p ~/.AgentTaskHub/mcp_task_manager_data
+mkdir -p ~/.meta_mind/mcp_task_manager_data
 ```
 
 Alternatively, set a custom directory by setting the environment variable:
@@ -80,7 +80,7 @@ If you're developing locally:
     "taskmanager": {
       "command": "tsx",
       "args": ["./index.ts"],
-      "cwd": "/path/to/your/mcp-AgentTaskHub"
+      "cwd": "/path/to/your/mcp-meta-mind"
     }
   }
 }
@@ -97,7 +97,7 @@ If you're developing locally:
 If you get errors about the server already running, check for existing processes:
 
 ```bash
-ps aux | grep agenttaskhub
+ps aux | grep meta-mind
 ```
 
 And terminate any running instances:
@@ -110,7 +110,7 @@ kill <process_id>
 
 If you continue experiencing issues:
 
-1. Check the GitHub repository issues: https://github.com/snapspecter/mcp-AgentTaskHub/issues
+1. Check the GitHub repository issues: https://github.com/snapspecter/mcp-meta-mind/issues
 2. Create a new issue with:
    - Your environment details (OS, Node.js version)
    - Steps to reproduce
